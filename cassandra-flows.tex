@@ -1,0 +1,59 @@
+%!TEX root = main.tex
+
+\section{Analysis cassandra flows}
+\label{sec:cassandra-flows}
+
+In our live video system, when cameras upload video to front-end server it re-send it to the cassandra storage server to store the video. When the watch app request to view a video, the front-end server will fetch video from the cassandra storage server. For storage and fetching video on the cassandra, front-end server needs to setup two different TCP connections. At storage process, after front-end server send data to cassandra, cassandra will reply a message to the server to inform whether the data has been inserted successfully. At fetching process, front-end server send a key to cassandra, and then cassandra will reply data to front-end sever according the key. That means for both of storage and fetching connections, there are send-in and send-out data. In this section we will detail the  send-in and send-out data in both of two connections in detail. 
+
+\subsection{Storage process}
+\label{sub:storm}
+The send-out data in storage process is the data that need to store in cassandra, and the send-in data is the message to inform whether the data has been inserted successfully. Table~\ref{tbl:storage-data} shows the statistics in the storage process. From the table we can see that send-out data rate is small, just 35KB/s much smaller than the rate that the camera send data to front-end server. In our personal live video system, once the front-send server receives a image or voice frame from camera, it will storm the frame to cassandra. However when the front-end server sends out the frame to cassandra, it can not send next frame until it receives successful reply message from cassandra. 
+
+In DCN(Data Center Network) the packet loss rate is quite small, so the loss rate of send-out data is quite small, just 0.001\%. But surprisingly, we find that 69.8\% of the loss packets are recovered by timeout retransmission. After we analysis those timeout retransmission we find that all of them is caused by less pkt retransmission(defined in Section~\ref{sub:diff-gra-voice}). As the front-end server can not send next frame until it receive the reply message, the packet in network often less than 3 packets(if the size of the frame is less than 3 packets). At such condition, the server can not receive enough dupacks to trigger fast retransmission.  
+
+As the send-in data just send reply message which is small and the time use to calculate the rate is the whole flow complete time, the rate of send-in is even samller than the send-out data, just 10KB/s. As the small packet loss rate and the one frame one reply charater of storage process, we can not find any reorder packets in send-in data.         
+
+\begin{table}[ht]
+\tablefontsize
+\renewcommand{\arraystretch}{\assize}
+ \setlength{\tabcolsep}{3pt}
+\caption{Send out and in analysis in storage process.}
+\centering
+\begin{tabular}{c|c|c|c}
+	\toprule
+	 type & rate & loss/reorder rate & timeout num/loss num \\
+	\hline
+	send-out & 35KB/s & 0.001\% & 69.8\% \\
+	\hline
+	send-in & 10KB/s & - & - \\
+	\bottomrule
+\end{tabular}
+\label{tbl:storage-data}
+\termspace
+\end{table} 
+
+\subsection{Fetching process}
+\label{sub:fetch}
+
+Once the watch-app send request to watch a live video, the front-end server begins to fetch data from cassandra. The cassandra store each image and voice frame individually, and each frame has an unique key. The front-end server fetch the frames of video one by one using their keys, and it will not fetch next frame util it successfully get a full frame. The send-out data in fetching data process is that the front-end server sends 'get data' message to cassandra, and the send-in data is that cassandra reply video frame to front-end server. Table~\ref{tbl:fetch-data} shows the statistics in the fetching process. From the table we can see that the rate in send-in data is 1.98MB/s, much larger than the rate of send-out in storming process. That is because the wathcing process is a little delay than the uploading data process of camera, which means the data has been stored in the cassandra. The reorder rate of the send-in data is also small, just 0.0124\%. And 33.2\% of the reorder packet is timeout retransmission data. We find that most of the timeout reorder packet is also less pkt retransmissio, similar with send-out data in storage process.
+
+Send-out data's rate is just 67KB/s, because the send-out data is small which just carries the request key. The loss rate is also small just 0.0125\%, but nearly all of the loss packets are recovered by timeout retransmission. That is because the send-out packets are the request packet carrying the key of the frame. Front-end server will not send out any data utill it receives the full frame. The loss packet can only recover by the timeout retransmission as there is only one packet in flight.  
+
+\begin{table}[ht]
+\tablefontsize
+\renewcommand{\arraystretch}{\assize}
+ \setlength{\tabcolsep}{3pt}
+\caption{Send out and in analysis in fetch data process.}
+\centering
+\begin{tabular}{c|c|c|c}
+	\toprule
+	 type & rate & loss/reorder rate & timeout num/loss num \\
+	\hline
+	send-out & 67KB/s & 0.0125\% & 99.6\% \\
+	\hline
+	send-in & 1.98MB/s & 0.0124\% & 33.2\% \\
+	\bottomrule
+\end{tabular}
+\label{tbl:fetch-data}
+\termspace
+\end{table} 

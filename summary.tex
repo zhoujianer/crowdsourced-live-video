@@ -1,0 +1,34 @@
+%!TEX root = main.tex
+
+\section{summary}
+\label{sec:summary}
+
+In this section we summarise the features of the crowdsourced live video system and the findings from our packet-level analysis.
+
+\textbf{\textit{System features}}
+\squishlist
+
+\item A controller is effective for crowdsourced live video system in practice.
+
+\item The video upload process is the key process in crowdsourced live video system, so the architecture of the system should first satisfy the need of video uploading process. When camera needs to upload video, the controller selects a nearest front-end server for the camera to upload video.  
+
+\item Caching video temporarily in the front-end server and supplying to multiple viewers make the system scalable. 
+
+%For crowdsourced live video we do not put the video to CDN to accelerate the download process as we can not sure the popularity of the video. However, if this system provide replay video function, we can put some popular video to CDN, and speed up the download process for replaying a video.
+
+\textbf{\textit{Measurement results}}
+
+\item 37 \% stalls in upload process causes the download flows do not have data to send and results in a stall in download flows.
+
+\item As reorder rate grows in upload process the upload flows' FCT decrease greatly which means the viewers may terminate the upload process if the network environment becomes bad.
+
+\item Resource constraint and timeout retransmission contribute 39.4\% and 29.8\% stalls in download process respectively. 
+
+\item  P frame takes over 82.8\% of all the video frame. As its burst feature of I frame, it has the highest packet loss rate among the three kinds of video frame. And among  lost packets,  11.8\% I frame, 11.3\% P frame and 14\% V frame cause timeout retransmission. About 45\% timeout retransmission is caused by double retransmission. 
+\squishend
+ 
+As the great influence of video upload process to this system, it is key to place more front-end servers on different place and the controller should always choose a nearest front-end server and make sure that the chosen server is located in a better network environment(higher bandwidth and less packet loss rate).  
+ 
+ The I frame is the basic frame for a picture, its loss has worse influence to a video which may cause a stop on a video and its loss rate is higher than P and V frames. The loss of other two frames just cause a blur for the video. Now all of the three frames are delivered by a same TCP connection. A loss of P frame or V frame may shift the congestion window and cause a timeout stall which also has great influence to the I frame. So we are going to  present a mixed delivered method to deliver the video. For I frame we use TCP connection and for P or V frame we use UDP to deliver. Such mixed method makes the loss of P or V frame has not influence for I frame. And because the loss of P or V frame just cause a blur on the video which is more acceptable for the user experience compared with a stop on a video.
+ 
+    

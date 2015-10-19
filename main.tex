@@ -1,0 +1,83 @@
+%\documentclass[journal]{IEEEtran}
+\documentclass{article}
+
+\usepackage[textwidth=8.5in, textheight=11in, top=1.5in, bottom=1.5in, left=1in, right=1in]{geometry}
+
+% correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor}
+% equalize two columns in the last page
+\usepackage{flushend}
+
+\usepackage{url}
+\usepackage[caption=false]{subfig}
+\usepackage{array}
+\usepackage{color}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{multicol}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\renewcommand{\algorithmicforall}{\textbf{for each}}
+% \usepackage{setspace} % squeeze the vertical space in algorithm
+
+% \makeatletter
+% \renewcommand{\ALG@beginalgorithmic}{\small}
+% \makeatother
+
+\usepackage{amsmath}
+% \usepackage{amsthm}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
+
+% shortcut
+\usepackage{xspace}
+\newcommand{\etc}{{etc.}\@\xspace}
+\newcommand{\ie}{{i.e.}\@\xspace}
+\newcommand{\etal}{{et al.}\@\xspace}
+\newcommand{\eg}{{e.g.}\@\xspace}
+\newcommand{\aka}{{aka}\@\xspace}
+
+%\newcommand{\red}[1] {\textbf{\color{red}{#1}}}
+\newcommand{\termspace}{{\vspace{-0.15in}}}         
+% control space after figure
+%\newcommand\figsize{0.8\linewidth}
+\newcommand\assize{1.3}
+\newcommand\tablefontsize{\small}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+
+\usepackage{graphicx}
+\graphicspath{{figs/}}
+
+
+\begin{document}
+
+\title{Measurement of Crowdsourced Live Video on Server Side}
+
+%\author{Jianer Zhou$^\dag$ $^\S$, Zhenyu Li$^\dag$, Qinghua Wu$^\dag$, Gaogang Xie$^\dag$ \\
+%$^\dag$ICT-CAS, China,
+%$^\S$Univ. of CAS, China\\
+%\{zhoujianer, zyli, wuqinghua, xie\}@ict.ac.cn}
+\date{}
+\maketitle
+
+\begin{abstract}
+As the popularity of intelligent medium device and improvement of bandwidth, more and more people involved in the crowdsourced live video. Crowdsourced live video is different with the traditional video systems, as it has unstable providers and multiple viewers. However such system has not been widely studied.  This motivate us to analyze the the architecture of a crowdsourced live video system in production environment.  And we further measure the effectiveness of this system by large packet-level traces collected in the front-end relay servers. We find that a controller is effective for crowdsourced live video system.  Caching video temporarily in the front-end server  makes the system scalable. Video upload process is key as it influences the video download rate and 37 \% of stalls in upload process cause stalls in download flows. Our findings provide new insights in such system and can help the designers to improve its effectiveness.
+\end{abstract}
+
+
+\input{introduction}
+\input{system}
+\input{datasets}
+\input{system-measurement}
+\input{frame-analysis}
+%\input{related}
+\input{summary}
+\input{conclusion}
+
+\bibliographystyle{abbrv}
+% \small
+\bibliography{reference}
+
+\end{document}

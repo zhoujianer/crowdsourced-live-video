@@ -1,0 +1,56 @@
+%!TEX root = main.tex
+
+\section{Upload flows analysis}
+\label{sec:upload-connection}
+
+In this section we will analysis the upload TCP flows between camera and front-end server. Camera upload vedio to front-end server once it produce image or voice frame. The fluency of upload vedio directly influences the wathcing experience of viewer. 
+
+\subsection{Reorder packets analysis}
+\label{sub:reorder}
+
+As we just capture packets of TCP flows at the front-end server, for upload flows it is not possible to distinguish the reorder packet and the real loss packet. At the point of front-end server all of them look like reordering packets. Table~\ref{tbl:reorder-rate} shows that the total frame's reorder rate is 1\%. The image frame's reorder packets rate is 1.4\% much higher than the voice frame which is just 0.2\%.  If the packet in upload flow is lost and can not be recovered by fast retransit, the front-end server will receive a timeout reorder packet. We define the reorder packet as timeout reorder packet if the interval between the reorder packet and the last send-in data is larger than 0.2 second. Table~\ref{tbl:reorder-rate} also shows that for voice frame, 20.7\% of reorder packet is timeout reorder while the image frame's timeout reorder is just 4.9\%. As illustrated in \label{sub:diff-gra-voice}, image frame's burst character and full MSS explain image frame's higher reorder rate and timeout reoder rate. 
+
+\begin{table}[ht]
+\tablefontsize
+\renewcommand{\arraystretch}{\assize}
+ \setlength{\tabcolsep}{3pt}
+\caption{Reorder packets rate in upload flows.}
+\centering
+\begin{tabular}{c|c|c}
+	\toprule
+	pkt type & reorder rate & timeout reorder/reorder \\
+	\hline
+	image & 1.4\% & 4.9\% \\
+	\hline
+	voice & 0.2\% & 20.7\% \\
+	\hline
+	total & 1\% & 6\% \\
+	\bottomrule
+\end{tabular}
+\label{tbl:reorder-rate}
+\termspace
+\end{table} 
+
+Table~\ref{tbl:reorder-rate-influence} shows the influence of reorder rate to upload flows. As reoder rate grows, the upload flows' flow rate, flow size and FCT(Flow Complete Time) become small. Especially when the reorder rate is larger than 20\% which means the network evironment is very bad, the uplaod flow size becomes as small as 0.73MB, much smaller than the flow size(5.1MB) when the reorder rate is 0-10\%. The video privoder also views the video that he upload. If the upload network environment is bad and the reorder packets rate become high, the privoders may terminal the upload process because the viewing experience is bad. That is why the flow size suddenly drop when the reorder rate become large. 
+
+\begin{table}[ht]
+\tablefontsize
+\renewcommand{\arraystretch}{\assize}
+ \setlength{\tabcolsep}{3pt}
+\caption{Influence of different reorder packets rate to upload flows.}
+\centering
+\begin{tabular}{c|c|c|c}
+	\toprule
+	 reorder rate & flow rate & flow size & FCT\\
+	\hline
+	0-10\% & 64KB/s & 5.1MB & 87.7s \\
+	\hline
+	10-20\% & 48KB/s & 4.7MB & 72.8s \\
+	\hline
+	$>$20\% & 17KB/s & 0.73MB & 60.7s \\
+	\bottomrule
+\end{tabular}
+\label{tbl:reorder-rate-influence}
+\termspace
+\end{table}  
+
