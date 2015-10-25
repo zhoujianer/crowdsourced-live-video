@@ -1,34 +1,33 @@
 %!TEX root = main.tex
 
-\section{summary}
+\section{Findings and Implications}
 \label{sec:summary}
 
-In this section we summarise the features of the crowdsourced live video system and the findings from our packet-level analysis.
+\begin{table}
+\tablefontsize
+\renewcommand{\arraystretch}{\assize}
+\setlength{\tabcolsep}{3pt}
+\caption{Summary of findings and their implications.}
+\centering
+\begin{tabular}{L{3.2in}|L{3.2in}}
+	\toprule
+	\multicolumn{1}{c|}{Findings} & \multicolumn{1}{c}{Implications} \\
+	\hline
+	37\% of stalls in upload flows cause the download flows to have no data to transmit and thus result in a stall in download flows. & Optimizing of upload network and the performance of upload flows may greatly improve the performance of download flows. \\
+	\hline
+	When reordering rate in upload flow grows, the FCT of upload flows decreases greatly, which means the users tend to terminate video sharing if the network quality becomes bad. & Service provider could deploy front-end servers more nearer to video sharing users to optimize the upload performance, which may greatly improve the Quality of Experience (QoE) for both upload and download users. \\
+	\hline
+	Timeout retransmission contributes 29.8\% of stalls in download process. & Costly timeout retransmissions in short flows could be eliminated through slightly aggressively retransmission strategies, \eg \cite{flach2013reducing,zhou2015demystifying}. \\
+	\hline
+	Different types of frame experience different timeout retransmission characteristics due to their distinct frame production speeds and frame sizes, \eg I frame experiences more \emph{continuous loss} stalls while V frame experiences more \emph{less pkt retrans} stalls. & Transmit each type of frame in separate connections, and optimize each connection by eliminating the timeout retransmissions according to the characteristics of frames and connections. \\
+	\bottomrule
+\end{tabular}
+\label{tbl:summary}
+\termspace
+\end{table}
 
-\textbf{\textit{System features}}
-\squishlist
+Table~\ref{tbl:summary} summarizes the main findings and implications of our measurement results. Overall, our major findings could be grouped into two categories, one is the significant impact of upload performance on the involvement of view sharing and on the Quality of Experience of video viewing, the other is the distinct distribution of timeout retransmission stalls in different types of frame.
 
-\item A controller is effective for crowdsourced live video system in practice.
+As the upload performance is vital to the overall performance of the crowdsourced live video system, more front-end servers should be deployed in different locations and the nearest one with better network quality (\ie lower delay and lower packet loss rate) should be selected for the video sharing users, to gain a better upload performance.
 
-\item The video upload process is the key process in crowdsourced live video system, so the architecture of the system should first satisfy the need of video uploading process. When camera needs to upload video, the controller selects a nearest front-end server for the camera to upload video.  
-
-\item Caching video temporarily in the front-end server and supplying to multiple viewers make the system scalable. 
-
-%For crowdsourced live video we do not put the video to CDN to accelerate the download process as we can not sure the popularity of the video. However, if this system provide replay video function, we can put some popular video to CDN, and speed up the download process for replaying a video.
-
-\textbf{\textit{Measurement results}}
-
-\item 37 \% stalls in upload process causes the download flows do not have data to send and results in a stall in download flows.
-
-\item As reorder rate grows in upload process the upload flows' FCT decrease greatly which means the viewers may terminate the upload process if the network environment becomes bad.
-
-\item Resource constraint and timeout retransmission contribute 39.4\% and 29.8\% stalls in download process respectively. 
-
-\item  P frame takes over 82.8\% of all the video frame. As its burst feature of I frame, it has the highest packet loss rate among the three kinds of video frame. And among  lost packets,  11.8\% I frame, 11.3\% P frame and 14\% V frame cause timeout retransmission. About 45\% timeout retransmission is caused by double retransmission. 
-\squishend
- 
-As the great influence of video upload process to this system, it is key to place more front-end servers on different place and the controller should always choose a nearest front-end server and make sure that the chosen server is located in a better network environment(higher bandwidth and less packet loss rate).  
- 
- The I frame is the basic frame for a picture, its loss has worse influence to a video which may cause a stop on a video and its loss rate is higher than P and V frames. The loss of other two frames just cause a blur for the video. Now all of the three frames are delivered by a same TCP connection. A loss of P frame or V frame may shift the congestion window and cause a timeout stall which also has great influence to the I frame. So we are going to  present a mixed delivered method to deliver the video. For I frame we use TCP connection and for P or V frame we use UDP to deliver. Such mixed method makes the loss of P or V frame has not influence for I frame. And because the loss of P or V frame just cause a blur on the video which is more acceptable for the user experience compared with a stop on a video.
- 
-    
+Even through previous work \cite{flach2013reducing,zhou2015demystifying} found the great degradation of performance of short flows due to timeout retransmission, we in this paper further find that flows may exhibit distinct characteristic of timeout retransmission due to different frame production intervals and frame sizes. To eliminate these costly timeout retransmissions, one could adopt existing solutions like TLP~\cite{flach2013reducing}, S-RTO~\cite{zhou2015demystifying}. Service provider could also optimize the performance by transmitting different frames in separate connections. Since the drop of a P or V frame can only hurt the watching experience slightly, P and V frames could be delivered in UDP connections and I frame is transmitted in TCP connection. Divide-and-conquer optimization of each type of connection may bring more performance improvement of the overall system.

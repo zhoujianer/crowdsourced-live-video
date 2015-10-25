@@ -9,7 +9,8 @@
 \usepackage{flushend}
 
 \usepackage{url}
-\usepackage[caption=false]{subfig}
+%\usepackage[caption=false]{subfig}
+\usepackage{subfigure}
 \usepackage{array}
 \usepackage{color}
 \usepackage{booktabs}
@@ -30,15 +31,27 @@
 \usepackage{amssymb}
 \usepackage{stmaryrd}
 
+
+\newcommand{\squishlist}{
+\begin{list}{$\bullet$}
+{ \setlength{\itemsep}{0pt}
+\setlength{\parsep}{3pt}
+\setlength{\topsep}{3pt}
+\setlength{\partopsep}{0pt}
+\setlength{\leftmargin}{1.5em}
+\setlength{\labelwidth}{1em}
+\setlength{\labelsep}{0.5em} } }
+
+\newcommand{\squishend}{  \end{list}  }
+
 % shortcut
 \usepackage{xspace}
 \newcommand{\etc}{{etc.}\@\xspace}
-\newcommand{\ie}{{i.e.}\@\xspace}
+\newcommand{\ie}{{i.e.,}\@\xspace}
 \newcommand{\etal}{{et al.}\@\xspace}
-\newcommand{\eg}{{e.g.}\@\xspace}
+\newcommand{\eg}{{e.g.,}\@\xspace}
 \newcommand{\aka}{{aka}\@\xspace}
 
-%\newcommand{\red}[1] {\textbf{\color{red}{#1}}}
 \newcommand{\termspace}{{\vspace{-0.15in}}}         
 % control space after figure
 %\newcommand\figsize{0.8\linewidth}
@@ -50,6 +63,15 @@
 \usepackage{graphicx}
 \graphicspath{{figs/}}
 
+\usepackage{indentfirst}
+\usepackage{fixltx2e}
+\newcommand{\wu}[1] {\textbf{\color{blue}{Wu: #1}}}
+\newcommand{\tsub}[1]{\textsubscript{#1}}
+
+\usepackage{multirow}
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
 
 \begin{document}
 
@@ -59,17 +81,17 @@
 %$^\dag$ICT-CAS, China,
 %$^\S$Univ. of CAS, China\\
 %\{zhoujianer, zyli, wuqinghua, xie\}@ict.ac.cn}
+\author{}
 \date{}
 \maketitle
 
 \begin{abstract}
-As the popularity of intelligent medium device and improvement of bandwidth, more and more people involved in the crowdsourced live video. Crowdsourced live video is different with the traditional video systems, as it has unstable providers and multiple viewers. However such system has not been widely studied.  This motivate us to analyze the the architecture of a crowdsourced live video system in production environment.  And we further measure the effectiveness of this system by large packet-level traces collected in the front-end relay servers. We find that a controller is effective for crowdsourced live video system.  Caching video temporarily in the front-end server  makes the system scalable. Video upload process is key as it influences the video download rate and 37 \% of stalls in upload process cause stalls in download flows. Our findings provide new insights in such system and can help the designers to improve its effectiveness.
+As the popularity of intelligent medium device and improvement of bandwidth, more and more people are involved in the crowdsourced live video applications. Despite its great popularity, crowdsourced live video system in the wild has not been widely studied. This motivate us to analyze the the performance of a crowdsourced live video system in production network. In this work, we measure the effectiveness of this system through a packet-level trace collected from server side. We find that video upload process is the key of the overall performance as it influences the video download throughput and 37 \% of stalls in upload process cause stalls in download flows. Our findings provide new insights in such system and can help the designers to improve its effectiveness.
 \end{abstract}
-
 
 \input{introduction}
 \input{system}
-\input{datasets}
+%\input{datasets}
 \input{system-measurement}
 \input{frame-analysis}
 %\input{related}

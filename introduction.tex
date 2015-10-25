@@ -3,36 +3,30 @@
 \section{Introduction}
 \label{sec:introduction}
 
- As cell phones and intelligent medium devices have camera, people can use such devices to broadcast their own activities to the Internet and we call such video as crowdsourced live video. Now more and more people have involved in the such kind of video as the emergence of popular application, such as Google Glass, Twitch.tv, Intelligent monitor~\cite{ishimaru2014blink}. People make use of crowdsourced live video to monitor their houses, make social activities with other people and even advertise their business. 
+The flourish of mobile terminals and wearable devices has greatly stimulated the development of video sharing/viewing applications, such as FaceTime, Twitch.tv, Intelligent monitors~\cite{ishimaru2014blink}. Among these applications, crowdsourced live video application is distinctive on that video sharing could be from any users, and there may be thousands of users viewing the same video simultaneously~\cite{Xu2012skype}. % The unique characteristics of this application have posed great challenges to both developers and researchers.
+
+
+
+% As cell phones and intelligent medium devices have camera, people can use such devices to broadcast their own activities to the Internet and we call such video as crowdsourced live video. Now more and more people have involved in the such kind of video as the emergence of popular application, such as Google Glass, Twitch.tv, Intelligent monitor~\cite{ishimaru2014blink}. People make use of crowdsourced live video to monitor their houses, make social activities with other people and even advertise their business. 
  
- Traditional live video system can be divided into two types. One has stable providers and multiple viewers, such as YouTube and game broadcaster~\cite{Mukerjee2014CDNvideo} ~\cite{yin2009livesky}. In these live video systems, once the video is produced, it is delivered to CDN(Content Delivery Network) and viewers fetch the videos from the CDN. The other type has unstable provider and single viewer, such as FaceTime and Skype~\cite{Xu2012skype}. For viewer, such video is unstable as it can not be delivered to CDN first and has to go through WAN(Wide Area Network) entirely the path~\cite{Benson2010DCN}. However there are just single viewer and the video provider can deliver the video directly to the viewer. Crowdsourced live video is different from traditional live video as it has both unstable providers and multiple viewers.
- 
- In crowdsourced live video system, anyone may post their video. System operators can not be sure which video will be popular and how long the video is, so it is unreasonable to deliver  the video to CDN. Viewers have to fetch the video from where it is produced which means the video is unstable for viewers. Multiple viewers mean that the providers can not make connections directly with viewers as the providers are often low power and low processing ability handheld devices. Such different features make the traditional system hard to meet the crowdsourced live video's needs. It is necessary to detail the architecture of such crowdsourced live systems and figure out how well they work.
+% Traditional live video system can be divided into two types. One has stable providers and multiple viewers, such as YouTube and game broadcaster~\cite{yin2009livesky,Mukerjee2014CDNvideo}. In these live video systems, once the video is produced, it is delivered to CDN(Content Delivery Network) and viewers fetch the videos from the CDN. The other type has unstable provider and single viewer, such as FaceTime and Skype~\cite{Xu2012skype}. For viewer, such video is unstable as it can not be delivered to CDN first and has to go through WAN(Wide Area Network) entirely the path~\cite{Benson2010DCN}. However there are just single viewer and the video provider can deliver the video directly to the viewer. Crowdsourced live video is different from traditional live video as it has both unstable providers and multiple viewers.
 
-There has been some work focused on the effectiveness and measurement for the crowdsourced video system. Simoens \etal~\cite{simoens2013sigasight} propose a system to storage and search the crowdsourced videos. However, the system does not focus on video broadcast process. Zhang \etal~\cite{zhang2015twitch} collect the traffic on client side to 'guess' the architecture of the crowdsourced video system and measure the user behaviour. Until now, there are not detail introduction to the crowdsourced live video system and the performance of such system has not been analysis in the wild. Motivated by this, in this paper we introduce the architecture of a crowdsourced live video system which has been deployed in the production environment and measure the effectiveness of this system by large packet-level traces collected in the front-end relay servers. In particular, our main observations are the following:
+% In crowdsourced live video system, anyone may post their video. System operators can not be sure which video will be popular and how long the video is, so it is unreasonable to deliver the video to CDN. Viewers have to fetch the video from where it is produced which means the video is unstable for viewers. Multiple viewers mean that the providers can not make connections directly with viewers as the providers are often low power and low processing ability handheld devices. Such different features make the traditional system hard to meet the crowdsourced live video's needs. It is necessary to detail the architecture of such crowdsourced live systems and figure out how well they work.
 
-\newcommand{\squishlist}{
- \begin{list}{$\bullet$}
-  { \setlength{\itemsep}{0pt}
-     \setlength{\parsep}{3pt}
-     \setlength{\topsep}{3pt}
-     \setlength{\partopsep}{0pt}
-     \setlength{\leftmargin}{1.5em}
-     \setlength{\labelwidth}{1em}
-     \setlength{\labelsep}{0.5em} } }
-
-\newcommand{\squishend}{
-  \end{list}  }
+There has been recent interest in studying and measuring the crowdsourced video system. Simoens \etal~\cite{simoens2013sigasight} proposed an architecture to storage and search the crowdsourced videos. The architecture does not specify how the videos are broadcast. Zhang \etal~\cite{zhang2015twitch} collected the traffic on client side to ``guess'' the architecture of the crowdsourced video system and measure the user behavior. To the best of our knowledge, our work is the first to measure the performance of such a system from server side in the wild. In this paper we introduce the architecture of a crowdsourced live video system which has been deployed in the production network and measure the effectiveness of this system through a large packet-level dataset collected in the front-end servers. In particular, our main findings are as follows:
 
 \squishlist
-\item By using a front-end relay server, the crowdsourced live video can effectively upload and by caching the video temporarily on the front-end server the system can handle mulitple viewers scalable.
+% \item By using a front-end relay server, the crowdsourced live video can effectively upload and by caching the video temporarily on the front-end server the system can handle multiple viewers at large scale.
 
-\item As the upload flows'  reorder rate grows, the flow rate drops greatly and viewers trend to stop uploading their video.
+\item As the reordering rate of upload flows grows, their throughput drops greatly and video sharing users tend to terminate the video sharing.
 
-\item About 40\% of stalls on the upload process will cause the download flows do not have data to send and result in a stall in download flows.
+\item About 40\% of stalls in upload flows cause the video viewing users to have no data to download and thus result in stalls in download flows.
 
-\item In video flows, I frame(the most important frame in H.264) has the highest packet loss rate compared with P and V frames.
-    
-\squishend 
+\item In video flows, I frame (with the largest size in all frames) has the highest packet loss rate compared with P and V frames.
 
-The rest of the paper is structured as follows. Section~\ref{sec:system} introduces the crowdsourced live video system and the overview of video frame. Section~\ref{sec:dataset} presents how we collect the dataset and the basic information of the datasets. In Section~\ref{sec:system-measurement} we measure the system's upload, download and their relationship in detail. Section~\ref{sec:frame-analysis} analysis the feature of different frames in H.264. Section~\ref{sec:summary} summarize the discovery we find and Section~\ref{sec:conclusion} concludes the paper. 
+\item Different types of frame exhibit different characteristics of timeout retransmissions, due to different frame size and frame production speed.    
+\squishend
+
+The above findings may provide valuable insight for designing a high-performance crowdsourced live video system. First, more front-end servers should be deployed nearer to video sharing users for the upload network with lower latency and packet loss rate, in order to improve the overall performance of the system. Second, different types of frame could be delivered in separate connections, which will be optimized in a divide-and-conquer manner. 
+
+The rest of the paper is structured as follows. Section~\ref{sec:system} describes the architecture of the crowdsourced live video system and the dataset collected from this system. Based on the dataset, in Section~\ref{sec:system-measurement} we investigate the performance of upload and download flows as well as their relationship in detail. Section~\ref{sec:frame-analysis} analyze the feature of different video frames in the flows. Section~\ref{sec:summary} summarizes our main findings and implications. Section~\ref{sec:conclusion} concludes the paper.

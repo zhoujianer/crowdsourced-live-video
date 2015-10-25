@@ -1,19 +1,19 @@
 %!TEX root = main.tex
 
-\section{System measurement}
+\section{System Measurement}
 \label{sec:system-measurement}
 
-We will use the TCP traces collected on the front-end server to measure our crowdsourced live video system in the wild. The connections between front-end server and storage system go through large bandwidth and small RTT internal network so they are stable in our system.  In this section we do not analysis TCP connections in internal network but just the connections that go through WAN. In Secion~\ref{sub:upload-analysis} we will analysis the TCP connection between camera and front-end server which is used to upload video to front-end server. In Secion~\ref{sub:download-analysis} we will analyse the TCP connection between viewers and front-end server which is used to download video from front-end sever. And in Secion~\ref{sub:relationship-analysis} we will analyze the relationship between the upload and download connections and try to figure out how the upload process influences the whole system performance.
+In this section, we use the TCP traces described above to measure our crowdsourced live video system. In Section~\ref{sub:upload-analysis} we will analyze the TCP upload flows, which transfer video data from camera to front-end server. In Section~\ref{sub:download-analysis} we will analyze the TCP download flows, which distribute video data from front-end server to viewers. And in Section~\ref{sub:relationship-analysis} we will analyze the relationship between the upload and download flows and try to figure out how the upload performance impacts the whole system performance.
 
-\subsection{Upload TCP connection analysis}
+\subsection{Analysis of TCP upload flows}
 \label{sub:upload-analysis}
-Cameras upload video to front-end server once they produce frame. The fluency of upload video directly influences the watching experience of viewer. Two factors may influence the upload process: one is the interval of frame produced process and the other is the delay by the network. We define \emph{TCP stall} as an event where the duration between two consecutive packets received/sent by the sender is larger than $\min(\tau\cdot\text{SRTT}, \text{RTO})$. We set $\tau$ to 2 in this work as the TCP sender could at least receive or send one packet during $2RTT$ in the ideal condition. And as in the upload flow we can get the RTT of this flow just in the 3WHS (3-way handshake) process, we use the RTT in 3WHS as the \text{SRTT} for this flow. 
 
-As we just capture packets of TCP flows at the front-end server, for upload flow it is not possible to distinguish the reorder packet and the real loss packet. At the point of front-end server ,all of them look like reordering packets. We define the stalls that happen when receiving reordering packet as reorder stall and other stalls as normal stall. When the camera does not send any data to the front-end server and also does not send FIN to finish this connection the front-end sever will send keep-alive packets to keep this connection alive. In our system we set the keep-alive packet's sending out interval as 5 seconds. And we define this stall as keep alive stall. We find that all the stall time accounts for 31.6\% of all the upload flow time, and among these stalls 93.5\% stall is normal stall, 1.3\% is reorder stall while 5.2\% is keep alive stall. That means the packet loss or reorder caused by the network is not the main factor that influence the rate of upload flow. However, the interval of frame produced process is the main factor that influence the upload flow. That can also be confirmed by the fact that the upload flow's rate is just 60KB/s, much smaller than the upload bandwidth. 
+Video sharing users upload video to front-end server once they produce frames. The fluency of upload video directly impact the Quality of Experience of video viewing. Two factors may influence the upload process: one is the interval of frame producing process and the other is the delay by the network. We define \emph{TCP stall} as an event where the duration between two consecutive packets received/sent by the server is larger than $\min(\tau\cdot\text{SRTT}, \text{RTO})$. Parameter $\tau$ is set to 2 in this work as the TCP endpoint could at least receive or send one packet during $2RTT$ in the ideal condition. As the front-end server (where we collected the data) is the receiver in the upload flow, we can only measure the 3-Way HandShake (3WHS) RTT during which servers send a SYN packet and receive the corresponding acknowledgment. Thus, we use the RTT in 3WHS as the \text{SRTT} for this flow. 
+
+The front-end server, as a receiver in the upload flow, may receive a series of disordered packets, in which the packets in the hole (\ie not received in sequential order) may be reordered by the network, or retransmitted because the previously transmitted segment is dropped. The front-end server could not distinguish whether the disordered packet is a packet reordering or packet retransmission. When a stall happens, receivers may have received a series of disordered packets, or sequential packets. We further distinguish the stalls by labeling the former as \emph{reordering stall} and the latter as \emph{normal stall}. When not receiving any video data from the camera, front-end server will send keep-alive packets, per in 5 seconds, to make the connection open. We find that all the stall time accounts for 31.6\% of all the completion time in the upload flows. Among these stalls, normal stall contributes 93.5\% of stall time, reordering stall contributes 1.3\% of stall time, keep-alive stall accounts for 5.2\% of stall time. It means that packet loss or reordering is not the main factor of network stalls. However, the interval of frame produced process is the main factor that influence the upload flow. That can also be confirmed by the fact that the median throughput of upload flows is 60KB/s, much smaller than the available upload bandwidth.
 
 \iffalse
  The percentage of different stall time is shown in Table~\ref{tbl:upload-stall}.
-
 \begin{table}[ht]
 \tablefontsize
 \renewcommand{\arraystretch}{\assize}
@@ -34,44 +34,28 @@ As we just capture packets of TCP flows at the front-end server, for upload flow
 \label{tbl:upload-stall}
 \termspace
 \end{table} 
-
 From Table~\ref{tbl:upload-stall}, we can see that 93.5\% stall is normal stall while the reorder stall is just 1.3\%. 
 \fi
 
-We further find that the total frame's reorder rate is 1\% and among the reorder packets 6\% suffer from timeout reorder. If the packet in upload flow is lost and can not be recovered by fast retransmit, the front-end server will receive a timeout reorder packet. We define the reorder packet as timeout reorder packet if the interval between the reorder packet and the last send-in data is larger than 0.2 second(the minimum RTO in linux kernel). 
+We define reordering rate as the ratio of packets which do not arrive in order to all data packets. We find that the overall reordering rate is about 1\% and among those disordered packets, 6\% of them suffer from timeout reordering, which means the interval between two disordered packets is larger than 0.2 second (\ie the minimum RTO set in Linux kernel). Although packet loss or reordering happens rarely, once it happens, it will significantly impact the performance of upload flows. We find that packet reordering strongly correlates with the size of upload flow, especially when the reordering rate becomes large. Table~\ref{tbl:reorder-rate-influence} shows the impact of reordering rate on upload flow size. When the reordering rate becomes larger, the performance of upload flows degrades dramatically.
 
-\iffalse
-\begin{table}[ht]
-\tablefontsize
-\renewcommand{\arraystretch}{\assize}
-\setlength{\tabcolsep}{3pt}
-\caption{Reorder packets rate in upload flows.}
-\centering
-\begin{tabular}{c|c}
-	\toprule
-	reorder rate & timeout/reorder \\
-	\hline
-	1\% & 6\% \\
-	\bottomrule
-\end{tabular}
-\label{tbl:reorder-rate}
-\termspace
-\end{table} 
-\fi
+% We further find that the total frame's reorder rate is 1\% and among the reorder packets 6\% suffer from timeout reorder. If the packet in upload flow is lost and can not be recovered by fast retransmit, the front-end server will receive a timeout reorder packet. We define the reorder packet as timeout reorder packet if the interval between the reorder packet and the last send-in data is larger than 0.2 second(the minimum RTO in linux kernel). Although packet loss or reordering is not the main factor that impacts the performance of upload flows, we find that packet reordering strongly correlates with the size of upload flow, especially when the reordering rate becomes large. Table~\ref{tbl:reorder-rate-influence} shows the impact of reordering rate on upload flow size. When the reordering rate becomes larger, the performance of upload flows degrades dramatically. 
 
-Although the packet loss or reorder is not the main factor that influences the upload flow rate, we find that packet reorder rate greatly influence the upload flow size, especially when the reorder rate becomes large. Table~\ref{tbl:reorder-rate-influence} shows the influence of reorder rate to upload flows. As reorder rate grows, the upload flows' flow rate, flow size and FCT(Flow Complete Time) become small. Especially when the reorder rate is larger than 20\% which means the network environment is very bad, the upload flow size becomes as small as 0.73MB, much smaller than the flow size(5.1MB) when the reorder rate is 0-10\%. The video provider also views the video that he uploads. If the upload network environment is bad and the reorder packets rate becomes high, the provider may terminal the upload process because the viewing experience is bad. That is why the flow size suddenly drops when the reorder rate becomes large. 
+% Although the packet loss or reorder is not the main factor that influences the upload flow rate, we find that packet reorder rate greatly influence the upload flow size, especially when the reorder rate becomes large. Table~\ref{tbl:reorder-rate-influence} shows the influence of reorder rate to upload flows. As reorder rate grows, the upload flows' flow rate, flow size and FCT(Flow Complete Time) become small. 
+
+When the reordering rate is larger than 20\%, which means the network quality is very bad, the mean size of upload flows becomes 0.73MB, much smaller than the flow size (5.1MB) when the reordering rate is less than 10\%. The video sharing users also views the video that he or she uploads. If the upload network is bad and the reordering rate becomes high, video sharing user is likely to terminate the upload process. That is why the flow size suddenly drops when the reordering rate becomes large. 
 
 \begin{table}[ht]
 \tablefontsize
 \renewcommand{\arraystretch}{\assize}
  \setlength{\tabcolsep}{3pt}
-\caption{Influence of different reorder packets rate to upload flows.}
+\caption{Impact of reordering rate on the performance of upload flows.}
 \centering
 \begin{tabular}{c|c|c|c}
 	\toprule
-	 reorder rate & flow rate & flow size & FCT\\
+	reordering rate & avg throughput & flow size & FCT \\
 	\hline
-	0-10\% & 64KB/s & 5.1MB & 87.7s \\
+	$<$10\% & 64KB/s & 5.1MB & 87.7s \\
 	\hline
 	10-20\% & 48KB/s & 4.7MB & 72.8s \\
 	\hline
@@ -82,24 +66,24 @@ Although the packet loss or reorder is not the main factor that influences the u
 \termspace
 \end{table}  
 
-\subsection{Download TCP connection analysis}
+\subsection{Analysis of TCP download flows}
 \label{sub:download-analysis}
 
-\subsubsection{Stall analysis}
-\label{sub:stall-download}
+To figure out what factors influence the download flows between front-end server and viewers, we analyze the stalls in the TCP download flow. The \emph{stall} in download flows is defined the same as in Section~\ref{sub:upload-analysis}. As the front-end server is the sender in the video viewing process, it could calculate RTT dynamically each time it receives acknowledgment of the transmitted data.
 
-To figure out what factors influence the download flows between front-end server and viewers, we analyze the stalls in the download TCP flow. We define the stall as the same in Section~\ref{sub:upload-analysis}. As the front-end server can get the ACK from viewers, we can calculate RTT dynamically in download flow. 
-According the positions that the stall happens we can define the stall as the following type. \emph{timeout retrans} is the stall that is caused by the timeout retransmission. \emph{resource constraint} happens when there are not data to send and that is often caused by that the camera does not upload data timely(the same with the normal stall in Section~\ref{sub:upload-analysis}). \emph{packet delay} is caused when the ACK packets are delayed to come back, either by network or client. When the viewers do not have enough buffer to handle the data and reduce its rwnd to zero the front-end server can not send any data until the viewers extend its rwnd. Such stall is defined as \emph{zero rwnd} stall. When there are not data to send for a long time and the viewers do not stop this connection, every 5 seconds the front-end server will send keep-alive packets to keep this connection alive. We define such stall as \emph{keep alive} stall. In totally we find that all the time of stall account for 35.2\% of all the download flow time.  Table~\ref{tbl:stall-download} shows the percentage of different stalls in download flow.
+According to the position where each stall happens, we further classify these stalls into the following types. \emph{Timeout retrans} stalls are those caused by the timeout retransmissions. \emph{Resource constraint} stall happens when there is no data in the buffer to transmit and is often caused by that the camera does not upload data timely.%(the same as the normal stall in Section~\ref{sub:upload-analysis} \wu{Normal stall can also be triggered for other reasons, \eg zero receive window.}). 
+\emph{Packet delay} stall is caused when the ACK packets are delayed, either by network or receiver. When a viewer does not have enough buffer to store the data it will reduce its receive window (rwnd) to zero, thus the front-end server can not send any data until the viewer enlarges its rwnd. Such a stall is defined as \emph{zero rwnd} stall. When there are no data to transmit, the front-end server will send a keep-alive packet every 5 seconds to prevent the connection to be terminated. Such a stall is labeled as \emph{keep alive} stall. In total the stall time occupies 35.2\% of the completion time of all download flows. Table~\ref{tbl:stall-download} shows the ratio of different stalls in terms of time in download flows.
 
 \begin{table}[ht]
 \tablefontsize
 \renewcommand{\arraystretch}{\assize}
  \setlength{\tabcolsep}{3pt}
-\caption{Percentage of different stalls in download flow.}
-\centering
+ \caption{Analysis for download flows}
+ \centering
+ \subtable[Ratio of different stalls in download flow.]{
 \begin{tabular}{c|c}
 	\toprule
-	 type & percentage(\%)\\
+	Stall Type & Percentage(\%)\\
 	\hline
 	resource constraint & 39.4   \\
 	\hline
@@ -111,62 +95,87 @@ According the positions that the stall happens we can define the stall as the fo
 	\hline
 	timeout retrans. & 22.8 \\
 	\hline
-	unknown & 1.5 \\
+	others & 1.5 \\
 	\bottomrule
 \end{tabular}
 \label{tbl:stall-download}
-\termspace
-\end{table}  
-
-From Table~\ref{tbl:stall-download} we can see that the \emph{resource constraint} accounts for 39.4\% of all the download stall which is the largest part. That is partly caused by the upload flows. In Section~\ref{sub:upload-analysis}we find that stalls account for 31.6\% of all upload flow time. As the camera stop sending data(caused by frame produce terminal) for a while, the front-end server does not have data to send. 16.3\% stall is \emph{zero rwnd} stall, which means the viewers' process ability is also an important factor to influence the efficiency of the system. \emph{keep alive} stall accounts for 10.1\% of download stall time which means that there are consumers who still wait for some time to stop the connection even when the producer stop posting video. 22.8\% stall is \emph{timeout retrans} which is caused by the network. In Section~\ref{sec:frame-analysis} we will further analysis the timeout retransmission in detail.
-
-\subsubsection{Variety of RTT}
-\label{sub:RTT}
-
-RTT is an important factor that influences the flow rate. The flows with small RTT are more likely to get high flow rate. RTT is determined by two factors. One is the number of hops between two nodes which is controlled by the route algorithm. The other is the packets' cache time at the routers which is controlled both by the router buffer capacity and the volume of packets in the network. In the WAN(Wide Area Network), the route algorithm and router buffer capacity are out of the control of sever. The only way that the server can control the RTT is by controlling the packets that is sent to the network.
-
-In table~\ref{tbl:inflight-rtt} we analysis the change of RTT when the $in\_flight$ change. $in\_flight$ is the number of packet in-flight which is defined as the following equation:
-
-\begin{footnotesize}
- \begin{equation}
-\label{eq:conserve}
-\begin{aligned}
-in\_flight = \enspace & packets\_out + retrans\_out \enspace - \\
-& (sacked\_out + lost\_out) \enspace ,
-\end{aligned}
-\end{equation}
-\end{footnotesize}
-
-where $packets\_out$ is the number of packets between $snd\_una$ (the packet with highest sequence number the receiver has acknowledged) and $snd\_nxt$ (the next new segment the sender would transmit), $retrans\_out$ is the number of retransmitted but not yet acknowledged packets, $sacked\_out$ is the number of SACKed packets, and $lost\_out$ is the number of lost packets.
-
-We examine the change of RTT by comparing it with the RTT which is calculated in the 3-way handshake(3WHS) phase(referred to as 3WHS\_RTT). From table~\ref{tbl:inflight-rtt} we can see that as the $in\_flight$ becomes large, the RTT also becomes large. When the $in\_flight$ becomes as large as 64KB, the RTT is even 2.6 times of the 3WHS\_RTT. That means when the $in\_flight$ become large the routers need more time to deal with the coming packets and that results in large RTT.      
-
-\begin{table}[ht]
-\tablefontsize
-\renewcommand{\arraystretch}{\assize}
- \setlength{\tabcolsep}{3pt}
-\caption{The varity of RTT when the $in\_flight$ packets changes.}
-\centering
-\begin{tabular}{c|c}
+}
+\hspace{3em}
+\subtable[Ratio of RTT over RTT\tsub{3WHS} when varying $in\_flight$.]{
+\begin{tabular}{l|c}
 	\toprule
-	 $in\_flight$ & RTT/3WHS\_RTT \\
+	 $in\_flight$ & RTT/RTT\tsub{3WHS} \\
 	\hline
-	$<$4KB & 0.89 \\
+	[0, 4KB) & 0.89 \\
 	\hline
-	4KB-8KB & 1.08  \\
+	[4KB, 8KB) & 1.08  \\
 	\hline
-	8KB-16KB & 1.31  \\
+	[8KB, 16KB) & 1.31  \\
 	\hline
-	16KB-32KB & 1.38  \\
+	[16KB, 32KB) & 1.38  \\
 	\hline
-	32KB-64KB & 1.61 \\
+	[32KB, 64KB) & 1.61 \\
 	\hline
-	$>$64KB & 2.6  \\
+	[64KB, $\infty$) & 2.6  \\
 	\bottomrule
 \end{tabular}
 \label{tbl:inflight-rtt}
+}
+\termspace
+\label{tbl:download-flow-analysis}
+\end{table}  
+
+From Table~\ref{tbl:stall-download} we can see that the \emph{resource constraint} accounts for 39.4\% of all the download stall, the largest part amongst all, which is partially caused by the upload flows. In Section~\ref{sub:upload-analysis} we find that stalls account for 31.6\% of all upload flow time. As the camera stops sending data for a while, the front-end server does not have any data to send. About 16.3\% stalls belongs to \emph{zero rwnd} stall, which means the viewers' inability of receiving data will also greatly impact the performance of video viewing. \emph{Keep alive} stall accounts for 10.1\% of download stall time, indicating that there are users still waiting for some time to terminate the connection even when the video sharing user has stopped uploading video.
+% \wu{Keep-alive stall is caused by that the data is unavailable for a long time (longer than 5 seconds), which does not mean the video upload flow has been terminated.}
+22.8\% of stalls belong to \emph{timeout retrans}, which is caused by the network. In Section~\ref{sec:frame-analysis} we will further analyze the timeout retransmission stalls in detail.
+
+\subsubsection{Analysis of RTT variation}
+\label{sub:RTT}
+
+RTT is an important factor that influences the flow rate. The flows with small RTT are more likely to get high flow rate. RTT is determined by two factors. One is the number of hops between two nodes which is controlled by the route algorithm. The other is the packets' cache time at the routers which is controlled both by the router buffer capacity and the volume of packets in the network. In the WAN, the route algorithm and router buffer capacity are out of the control of sever. The only way that the server can control the RTT is by controlling the packets that is sent to the network.
+
+In table~\ref{tbl:inflight-rtt} we analyze the change of RTT when varying the $in\_flight$ size. Parameter $in\_flight$ represents the amount of data bytes sent already and not received yet by the viewers, which is defined as follows:
+%\begin{footnotesize}
+\begin{equation}
+\label{eq:conserve}
+\begin{aligned}
+in\_flight = \enspace & packets\_out + retrans\_out \enspace - 
+ (sacked\_out + lost\_out) \enspace ,
+\end{aligned}
+\end{equation}
+%\end{footnotesize}
+where $packets\_out$ is the data bytes between $snd\_una$ (the packet with highest sequence number the receiver has acknowledged) and $snd\_nxt$ (the next new byte the sender would transmit), $retrans\_out$ is the data bytes which is retransmitted but not yet acknowledged, $sacked\_out$ is the SACKed data bytes, and $lost\_out$ is the estimated dropped data bytes.
+
+We examine the change of RTT by comparing it with the RTT calculated in the 3-way handshake (3WHS) phase (referred to as RTT\tsub{3WHS}). From table~\ref{tbl:inflight-rtt} we can see that as the $in\_flight$ becomes large, the RTT also becomes large. When the $in\_flight$ is 64KB, the RTT is even 2.6 times of the RTT\tsub{3WHS}. That means when there are large number of in flight packets, routers in the path need more time to process them and thus result in large RTT.
+
+\iffalse
+\begin{table}[ht]
+\tablefontsize
+\renewcommand{\arraystretch}{\assize}
+\setlength{\tabcolsep}{3pt}
+\caption{Ratio of RTT over RTT\tsub{3WHS} when varying $in\_flight$.}
+\centering
+\begin{tabular}{l|c}
+	\toprule
+	 $in\_flight$ & RTT/RTT\tsub{3WHS} \\
+	\hline
+	[0, 4KB) & 0.89 \\
+	\hline
+	[4KB, 8KB) & 1.08  \\
+	\hline
+	[8KB, 16KB) & 1.31  \\
+	\hline
+	[16KB, 32KB) & 1.38  \\
+	\hline
+	[32KB, 64KB) & 1.61 \\
+	\hline
+	[64KB, $\infty$) & 2.6  \\
+	\bottomrule
+\end{tabular}
+\label{tbl:inflight-rdtt}
 \termspace
 \end{table}  
+\fi
 
 
 %\subsection{Storage TCP connection analysis}
@@ -226,23 +235,23 @@ We examine the change of RTT by comparing it with the RTT which is calculated in
 %\end{table} 
 
 
-\subsection{Relationship between TCP connections}
+\subsection{Relationship between TCP upload and download flows}
 \label{sub:relationship-analysis}
-In the above section, we discuss the connections in our system individually. These TCP connections also have influence to each other. For example the reorder in upload flows may cause the download flows do not have data to send. In this section we will detail the relationship between these TCP connections.
+In the above, we have investigated the TCP upload and download flows in our system separately. However, the upload flows may have impact on the performance of download flows if they are in the same session (\ie they are sharing and viewing the same live video). For example reordering in upload flows may cause the download flows have no data to transfer. In this section we will detail the relationship between these TCP upload and download flows.
 
-The system uses a unique ID for each video, so we can match the upload and download flow by the video ID. There are hundreds of front-end servers in our system, so the video may upload to a server while viewers may download it from other servers. Our data is collected from one server so we can not find upload flow for each download flow. Figure~\ref{fig:up-down-rate} shows the corresponding rate of upload and download flows who have the same ID. From the figure we find that the most of the spots are spread near the diagonal line which means that most videos' download flow rate is the same with the upload flow rate. This confirms that for the crowdsourced live video, the video produce and upload process are the key for viewers' experience.  
+The system assigns each live video a unique ID for sharing and viewing, so we can match the upload and download flows by the video ID. Our data is collected from one front-end server, thus not all flows could be matched due to that upload flow is from one server and download flows are from other servers. Figure~\ref{fig:up-down-rate} shows the throughput of upload and download flows respectively in the same session, each in a point. From the figure, we find that the most of the points spread along the $y = x$ line, which means that in most sessions the throughput of download flows is equal to that of the upload flow. This confirms that for the crowdsourced live video, the video upload process are the key of video viewing performance.
 
 \begin{figure}[t]
 \centering
-\subfloat[The corresponding rate of upload and download flows.]{
+\subfigure[Throughput of upload and download flows.]{
 	\includegraphics[width=1.8in]{up-down-rate}
 	\label{fig:up-down-rate}}
 \hspace{1em}%
-\subfloat[The corresponding FCT of upload and download flows.]{
+\subfigure[FCT of upload and download flows.]{
 	\includegraphics[width=1.8in]{up-down-fct}
 	\label{fig:up-down-fct}}
 	\hspace{1em}%
-\subfloat[The corresponding download flow FCT with upload flow rate.]{
+\subfigure[The corresponding download flow FCT with upload flow throughput.]{
 	\includegraphics[width=1.8in]{up-rate-down-fct}
 	\label{fig:up-rate-down-fct}}
 \caption{Relationship between upload and download flows for the same video.}
@@ -259,7 +268,7 @@ The system uses a unique ID for each video, so we can match the upload and downl
 %	\termspace
 %\end{figure}
 
-Figure~\ref{fig:up-down-fct} shows the  upload and download flow's corresponding FCT. From the figure we can find that the spots are spread under the lower half part of the figure as the download flows' FCT is shorter than upload flow. And we also find that the sports are discretely spread which means that the download flows' FCT is independent with upload flows' FCT. Figure~\ref{fig:up-rate-down-fct} shows the relationship between the download flows' FCT and the upload flows' rate. Most of the download flows' FCT is short under 200s. The upload flows' rate has not obviously influence to the download flows' FCT as even when the upload flows' rate grows to 100KB/s most of the download flows' FCT is spread under 50s. Figure~\ref{fig:up-down-fct} and Figure~\ref{fig:up-rate-down-fct} confirm that the upload flows' FCT and rate have not obviously influence to the download flows' FCT. So we think the content of the upload video is the key factor that influence the download flows' FCT, which means that viewers determine when to stop watching the video mainly according the video's content. 
+Figure~\ref{fig:up-down-fct} shows the FCT of upload and download follows. From the figure we can find that the points spread below the $y = x$ line, indicating that the FCT of download flows is shorter than that of upload flow. And we also find that the points spread discretely, which means that the FCT of download flows is independent with that of upload flows. Figure~\ref{fig:up-rate-down-fct} shows the relationship between the FCT of download flows and the throughput of upload flows. Most of the FCT of download flows is shorter than 200s. The throughput of upload flows is irrelevant with the FCT of download flows. Even when the throughput of upload flows grows to 100KB/s, most of the FCT of download flows is under 50s, nearly the same as when the throughput of upload flows is about 18KB/s. Figure~\ref{fig:up-down-fct} and Figure~\ref{fig:up-rate-down-fct} confirm that the FCT and throughput of upload flows do not have obvious influence on the FCT of the download flows. So we infer that the content features of the upload video are the key factor that impacts the FCT of download flows. 
 %\begin{figure}[ht]
 %	\centering
 %	\includegraphics[width=\linewidth]{up-down-fct}
@@ -276,19 +285,5 @@ Figure~\ref{fig:up-down-fct} shows the  upload and download flow's corresponding
 %	\termspace
 %\end{figure}
 
-We also measure what happen in download flow when the upload has stall. We find that 37.2\% stall in upload flows will cause stall in download flow and almost all of these stalls in download flows are  \emph{resource constraint}, the most common stall in download flow. 
+We also measure the impact of stalls in upload flows on the download flows. We find that 37.2\% of stalls in upload flows will cause stalls in download flows, most of which appear as \emph{resource constraint}, occupying the largest portion of the stalls in download flows. 
 %Although we can not match the storage stall with download flows, we think most of the stall in storage flow will also cause \emph{resource constraint} stall in download flows. It is easy to understand as all the stall in upload and storage flows influence the data supply for download flows.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
